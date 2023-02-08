@@ -24,6 +24,11 @@ const char* password = "password"; //Enter Password
 const char* websockets_server_host = "serverip_or_name"; //Enter server adress
 const uint16_t websockets_server_port = 8080; // Enter server port
 
+#define BUTTON_PIN 21 // GIOP21 pin connected to button
+#define RELAY_PIN 16 // ESP32 pin GIOP16 connected to the IN pin of relay
+
+bool motorPowerState = false;
+
 using namespace websockets;
 
 WebsocketsClient client;
@@ -32,11 +37,17 @@ void setup() {
     // Connect to wifi
     WiFi.begin(ssid, password);
 
+    pinMode(BUTTON_PIN, INPUT_PULLUP); // button
+    // initialize digital pin as an output.
+    pinMode(RELAY_PIN, OUTPUT);
+
+
     // Wait some time to connect to wifi
     for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
         Serial.print(".");
         delay(1000);
     }
+
 
     // Check if connected to wifi
     if(WiFi.status() != WL_CONNECTED) {
@@ -63,9 +74,34 @@ void setup() {
 
 void loop() {
     // let the websockets client check for incoming messages
-    if(client.available()) {
-        client.poll();
+      
+    // read the state of the switch/button:
+    int buttonState = digitalRead(BUTTON_PIN);
+  
+    // print out the button's state
+    Serial.println(buttonState);
+    if (buttonState == 0){ // power on
+        digitalWrite(RELAY_PIN, HIGH);
+      if(motorPowerState){ // motors are on
+       // do motor stuff
+      } else {
+        motorPowerState = true;
+        Serial.println("Switching Motor on"); 
+        
+      }
+    } else { // power off
+      if(motorPowerState){
+        digitalWrite(RELAY_PIN, LOW);
+        motorPowerState = false;
+        Serial.println("Switching Motor off");  // switch motor off
+      } else {
+        
+      }
     }
+    
+//    if(client.available()) { // WSS
+//        client.poll();
+//    }
     delay(500);
 }
 
