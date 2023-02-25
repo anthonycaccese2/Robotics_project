@@ -18,6 +18,7 @@
 
 #include <ArduinoWebsockets.h>
 #include <WiFi.h>
+#include "CytronMotorDriver.h"
 
 const char* ssid = "ssid"; //Enter SSID
 const char* password = "password"; //Enter Password
@@ -26,8 +27,17 @@ const uint16_t websockets_server_port = 8080; // Enter server port
 
 #define BUTTON_PIN 21 // GIOP21 pin connected to button
 #define RELAY_PIN 16 // ESP32 pin GIOP16 connected to the IN pin of relay
+#define DRMOTOR_PWM 27
+#define DRMOTOR_DIR 26
+
 
 bool motorPowerState = false;
+int currentSpeed = 128; // -255 to 255
+
+
+
+// Configure the motor driver.
+CytronMD motor(PWM_DIR, DRMOTOR_PWM, DRMOTOR_DIR);  // PWM = Pin 3, DIR = Pin 4.
 
 using namespace websockets;
 
@@ -35,41 +45,41 @@ WebsocketsClient client;
 void setup() {
     Serial.begin(115200);
     // Connect to wifi
-    WiFi.begin(ssid, password);
+//    WiFi.begin(ssid, password);
 
     pinMode(BUTTON_PIN, INPUT_PULLUP); // button
     // initialize digital pin as an output.
     pinMode(RELAY_PIN, OUTPUT);
 
-
-    // Wait some time to connect to wifi
-    for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
-        Serial.print(".");
-        delay(1000);
-    }
-
-
-    // Check if connected to wifi
-    if(WiFi.status() != WL_CONNECTED) {
-        Serial.println("No Wifi!");
-        return;
-    }
-
-    Serial.println("Connected to Wifi, Connecting to server.");
-    // try to connect to Websockets server
-    bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
-    if(connected) {
-        Serial.println("Connected!");
-        client.send("Hello Server");
-    } else {
-        Serial.println("Not Connected!");
-    }
-    
-    // run callback when messages are received
-    client.onMessage([&](WebsocketsMessage message){
-        Serial.print("Got Message: ");
-        Serial.println(message.data());
-    });
+//
+//    // Wait some time to connect to wifi
+//    for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
+//        Serial.print(".");
+//        delay(1000);
+//    }
+//
+//
+//    // Check if connected to wifi
+//    if(WiFi.status() != WL_CONNECTED) {
+//        Serial.println("No Wifi!");
+//        return;
+//    }
+//
+//    Serial.println("Connected to Wifi, Connecting to server.");
+//    // try to connect to Websockets server
+//    bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
+//    if(connected) {
+//        Serial.println("Connected!");
+//        client.send("Hello Server");
+//    } else {
+//        Serial.println("Not Connected!");
+//    }
+//    
+//    // run callback when messages are received
+//    client.onMessage([&](WebsocketsMessage message){
+//        Serial.print("Got Message: ");
+//        Serial.println(message.data());
+//    });
 }
 
 void loop() {
@@ -77,32 +87,40 @@ void loop() {
       
     // read the state of the switch/button:
     int buttonState = digitalRead(BUTTON_PIN);
-  
     // print out the button's state
     Serial.println(buttonState);
-    if (buttonState == 0){ // power on
-        digitalWrite(RELAY_PIN, HIGH);
+    if (buttonState == 1){ // power on
+        digitalWrite(RELAY_PIN, LOW);
+//        motor.setSpeed(128);
+//       motor.setSpeed(currentSpeed);
       if(motorPowerState){ // motors are on
        // do motor stuff
       } else {
         motorPowerState = true;
         Serial.println("Switching Motor on"); 
-        
       }
     } else { // power off
+        digitalWrite(RELAY_PIN, HIGH);
       if(motorPowerState){
-        digitalWrite(RELAY_PIN, LOW);
         motorPowerState = false;
         Serial.println("Switching Motor off");  // switch motor off
+//        motor.setSpeed(0);
       } else {
-        
+//        motor.setSpeed(0);
       }
     }
-    
+    if(motorPowerState){
+      Serial.println("Motor true");
+      motor.setSpeed(128);
+    } else {
+      Serial.println("Motor false");
+      motor.setSpeed(0);
+    }
+//    
 //    if(client.available()) { // WSS
 //        client.poll();
 //    }
-    delay(500);
+    delay(100);
 }
 
 /*********
