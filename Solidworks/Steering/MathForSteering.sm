@@ -4,7 +4,7 @@
   <settings ppi="168">
     <identity>
       <id>190da695-caa7-4c7d-86d6-87b93589aef2</id>
-      <revision>8</revision>
+      <revision>9</revision>
     </identity>
     <calculation>
       <precision>4</precision>
@@ -42,7 +42,7 @@
       <math>
         <input>
           <e type="operand">θ</e>
-          <e type="operand">45</e>
+          <e type="operand">90</e>
           <e type="operand">π</e>
           <e type="operand">180</e>
           <e type="operator" args="2">/</e>
@@ -95,7 +95,7 @@
           <e type="operand">s</e>
         </input>
         <result action="numeric">
-          <e type="operand">1.5708</e>
+          <e type="operand">3.1416</e>
         </result>
       </math>
     </region>
