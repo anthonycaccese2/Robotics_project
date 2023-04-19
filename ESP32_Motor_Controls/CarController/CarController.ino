@@ -29,7 +29,7 @@ const uint16_t websockets_server_port = 8080; // Enter server port
 #define RELAY_PIN 16 // ESP32 pin GIOP16 connected to the IN pin of relay
 #define DRMOTOR_PWM 27
 #define DRMOTOR_DIR 26
-
+#define SERVO 17
 
 bool motorPowerState = false;
 int currentSpeed = 128; // -255 to 255
