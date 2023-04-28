@@ -2,14 +2,12 @@
   Esp32 Motor controller 
 
 */
+#include <ESP32Servo.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include "CytronMotorDriver.h"
-
-//const char* ssid = "ssid"; //Enter SSID
-//const char* password = "password"; //Enter Password
-//const char* websockets_server_host = "serverip_or_name"; //Enter server adress
-//const uint16_t websockets_server_port = 8080; // Enter server port
+// Steering servo
+Servo myservo;  // create servo object to control a servo
 
 #define BUTTON_PIN 21 // GIOP21 pin connected to button
 #define RELAY_PIN 16 // ESP32 pin GIOP16 connected to the IN pin of relay
@@ -80,6 +78,7 @@ float floatMap(float x, float in_min, float in_max, float out_min, float out_max
 
 
 void setup() {
+    ESP32PWM::allocateTimer(0);
     Serial.begin(115200);
 
     pinMode(BUTTON_PIN, INPUT_PULLUP); // button
@@ -112,6 +111,9 @@ void setup() {
     // Register for a callback function that will be called when data is received
     esp_now_register_recv_cb(OnDataRecv);
 
+  //Steering servo 
+    myservo.attach(17, 500, 2500);  // attaches the servo on pin 9 to the servo object
+    myservo.setPeriodHertz(50);      // Standard 50hz servo
 }
 
 void loop() {
@@ -148,9 +150,17 @@ void loop() {
         tempSpeed = -tempSpeed;
       }
       motor.setSpeed(tempSpeed);
+      float tempTurn = floatMap(currentTurn, -90, 90, 85, 105);
+      Serial.print("Turn:");
+      Serial.println(tempTurn);
+//      myservo.write(tempTurn);
+      
     } else {
       Serial.println("Motor false");
       motor.setSpeed(0);
+      float tempTurn = 90;
+      Serial.println(tempTurn);
+//      myservo.write(90);
     }
 //    
 //    if(client.available()) { // WSS
