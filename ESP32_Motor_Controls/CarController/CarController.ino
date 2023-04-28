@@ -1,29 +1,15 @@
 /*
-  Esp32 Websockets Client
-
-  This sketch:
-        1. Connects to a WiFi network
-        2. Connects to a Websockets server
-        3. Sends the websockets server a message ("Hello Server")
-        4. Prints all incoming messages while the connection is open
-
-  Hardware:
-        For this sketch you only need an ESP32 board.
-
-  Created 15/02/2019
-  By Gil Maimon
-  https://github.com/gilmaimon/ArduinoWebsockets
+  Esp32 Motor controller 
 
 */
-
-#include <ArduinoWebsockets.h>
+#include <esp_now.h>
 #include <WiFi.h>
 #include "CytronMotorDriver.h"
 
-const char* ssid = "ssid"; //Enter SSID
-const char* password = "password"; //Enter Password
-const char* websockets_server_host = "serverip_or_name"; //Enter server adress
-const uint16_t websockets_server_port = 8080; // Enter server port
+//const char* ssid = "ssid"; //Enter SSID
+//const char* password = "password"; //Enter Password
+//const char* websockets_server_host = "serverip_or_name"; //Enter server adress
+//const uint16_t websockets_server_port = 8080; // Enter server port
 
 #define BUTTON_PIN 21 // GIOP21 pin connected to button
 #define RELAY_PIN 16 // ESP32 pin GIOP16 connected to the IN pin of relay
@@ -32,54 +18,100 @@ const uint16_t websockets_server_port = 8080; // Enter server port
 #define SERVO 17
 
 bool motorPowerState = false;
-int currentSpeed = 128; // -255 to 255
-
-
 
 // Configure the motor driver.
 CytronMD motor(PWM_DIR, DRMOTOR_PWM, DRMOTOR_DIR);  // PWM = Pin 3, DIR = Pin 4.
 
-using namespace websockets;
+// WIFI 
 
-WebsocketsClient client;
+uint8_t broadcastAddress[] = {0xC8,0xC9,0xA3,0xC5,0xBF,0xEC};
+
+// Variable to store if sending data was successful
+String success;
+
+// Define variables to store incoming readings
+float currentTurn = 0;
+int currentSpeed = 0; // -255 to 255
+bool currentDir = false; // 0 forward; 1 backward
+
+typedef struct struct_message {
+    int turn;
+    int speed;
+    bool dir;
+} struct_message;
+
+// Create a struct_message to hold incoming sensor readings
+struct_message incomingReadings;
+
+esp_now_peer_info_t peerInfo;
+
+// Callback when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (status ==0){
+    success = "Delivery Success :)";
+  }
+  else{
+    success = "Delivery Fail :(";
+  }
+}
+
+// Callback when data is received
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
+  Serial.print("Bytes received: ");
+  Serial.println(len);
+  currentTurn = incomingReadings.turn;
+  currentSpeed = incomingReadings.speed;
+  currentDir = incomingReadings.dir;
+//  Serial.print("incomingTurn: ");
+//  Serial.println(incomingTurn);
+//  Serial.print("incomingSpeed: ");
+//  Serial.println(incomingSpeed);
+//  Serial.print("incomingDir: ");
+//  Serial.println(incomingDir);
+}
+
+
+float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+
 void setup() {
     Serial.begin(115200);
-    // Connect to wifi
-//    WiFi.begin(ssid, password);
 
     pinMode(BUTTON_PIN, INPUT_PULLUP); // button
     // initialize digital pin as an output.
     pinMode(RELAY_PIN, OUTPUT);
 
-//
-//    // Wait some time to connect to wifi
-//    for(int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
-//        Serial.print(".");
-//        delay(1000);
-//    }
-//
-//
-//    // Check if connected to wifi
-//    if(WiFi.status() != WL_CONNECTED) {
-//        Serial.println("No Wifi!");
-//        return;
-//    }
-//
-//    Serial.println("Connected to Wifi, Connecting to server.");
-//    // try to connect to Websockets server
-//    bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
-//    if(connected) {
-//        Serial.println("Connected!");
-//        client.send("Hello Server");
-//    } else {
-//        Serial.println("Not Connected!");
-//    }
-//    
-//    // run callback when messages are received
-//    client.onMessage([&](WebsocketsMessage message){
-//        Serial.print("Got Message: ");
-//        Serial.println(message.data());
-//    });
+    // Set device as a Wi-Fi Station
+    WiFi.mode(WIFI_STA);
+  
+    // Init ESP-NOW
+    if (esp_now_init() != ESP_OK) {
+      Serial.println("Error initializing ESP-NOW");
+      return;
+    }
+  
+    // Once ESPNow is successfully Init, we will register for Send CB to
+    // get the status of Trasnmitted packet
+    esp_now_register_send_cb(OnDataSent);
+    
+    // Register peer
+    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+    peerInfo.channel = 0;  
+    peerInfo.encrypt = false;
+    
+    // Add peer        
+    if (esp_now_add_peer(&peerInfo) != ESP_OK){
+      Serial.println("Failed to add peer");
+      return;
+    }
+    // Register for a callback function that will be called when data is received
+    esp_now_register_recv_cb(OnDataRecv);
+
 }
 
 void loop() {
@@ -111,7 +143,11 @@ void loop() {
     }
     if(motorPowerState){
       Serial.println("Motor true");
-      motor.setSpeed(128);
+      float tempSpeed = floatMap(currentSpeed, 0, 20.0, 0, 225);
+      if (currentDir) {
+        tempSpeed = -tempSpeed;
+      }
+      motor.setSpeed(tempSpeed);
     } else {
       Serial.println("Motor false");
       motor.setSpeed(0);
