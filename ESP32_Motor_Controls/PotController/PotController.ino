@@ -56,12 +56,15 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // Pots 
 const int turnPin = 39;// Analog pin
 const int speedPin = 36;// Analog pin
+const int dirPin = 21;// Switch pin
 
 int turnValue;// do not change
 float voltage =0;// do not change
 
 int speedValue;// do not change
 float voltage1 =0;// do not change
+
+bool dirValue; 
 
 
 float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -81,6 +84,7 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
+  pinMode(dirPin, INPUT_PULLUP); // button
 
   // Once ESPNow is successfully Init, we will register for Send CB to
   // get the status of Trasnmitted packet
@@ -111,16 +115,25 @@ void loop() {
   voltage1 = (3.3/4095.0) * speedValue;
   speedValue = floatMap(speedValue, 0, 4095.0, 0, 20); 
 
+  int buttonState = digitalRead(dirPin);
+   if (buttonState==0){
+    dirValue = false;
+  } else {
+    dirValue = true;
+  }
   // prepared data 
   dataReadings.turn = turnValue;
   dataReadings.speed = speedValue;
-  dataReadings.dir = false;
+  dataReadings.dir = dirValue;
+ 
   
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &dataReadings, sizeof(dataReadings));
    
   if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    Serial.print("Sent with success");
+    Serial.println(dirValue);
+    
   }
   else {
     Serial.println("Error sending the data");
