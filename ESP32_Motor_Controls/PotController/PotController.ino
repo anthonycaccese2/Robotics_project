@@ -107,8 +107,8 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
 // read the input on analog pin potPin:
-  voltage = (3.3/4095.0) * turnValue;
   turnValue = analogRead(turnPin);
+  voltage = (3.3/4095.0) * turnValue;
   turnValue = floatMap(turnValue, 0, 4095.0, -90, 90); 
   
   speedValue = analogRead(speedPin);
@@ -133,6 +133,8 @@ void loop() {
   if (result == ESP_OK) {
     Serial.print("Sent with success");
     Serial.println(dirValue);
+    Serial.println(speedValue);
+    Serial.println(turnValue);
     
   }
   else {

@@ -64,11 +64,11 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   currentSpeed = incomingReadings.speed;
   currentDir = incomingReadings.dir;
 //  Serial.print("incomingTurn: ");
-//  Serial.println(incomingTurn);
+//  Serial.println(currentTurn);
 //  Serial.print("incomingSpeed: ");
-//  Serial.println(incomingSpeed);
+//  Serial.println(currentSpeed);
 //  Serial.print("incomingDir: ");
-//  Serial.println(incomingDir);
+//  Serial.println(currentDir);
 }
 
 
@@ -118,7 +118,7 @@ void setup() {
 
 void loop() {
     // let the websockets client check for incoming messages
-      
+     
     // read the state of the switch/button:
     int buttonState = digitalRead(BUTTON_PIN);
     // print out the button's state
@@ -153,14 +153,14 @@ void loop() {
       float tempTurn = floatMap(currentTurn, -90, 90, 85, 105);
       Serial.print("Turn:");
       Serial.println(tempTurn);
-//      myservo.write(tempTurn);
+      myservo.write(tempTurn);
       
     } else {
       Serial.println("Motor false");
       motor.setSpeed(0);
       float tempTurn = 90;
       Serial.println(tempTurn);
-//      myservo.write(90);
+      myservo.write(90);
     }
 //    
 //    if(client.available()) { // WSS
